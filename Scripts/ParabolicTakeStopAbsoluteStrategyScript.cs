@@ -14,8 +14,8 @@ namespace Scripts
         public OptimProperty ParabolicAccelerationMaxPeriod = new OptimProperty(0.02, 0.01, 0.4, 0.01);
         public OptimProperty ParabolicAccelerationMinPeriod = new OptimProperty(0.01, 0.001, 0.1, 0.001);
         public OptimProperty ParabolicAccelerationStepPeriod = new OptimProperty(0.01, 0.001, 0.1, 0.001);
-        public OptimProperty StopLoss = new OptimProperty(200, 200, 2000, 200);
-        public OptimProperty TakeProfit = new OptimProperty(2000, 500, 5000, 500);
+        public OptimProperty StopLossPeriod = new OptimProperty(200, 200, 2000, 200);
+        public OptimProperty TakeProfitPeriod = new OptimProperty(2000, 500, 5000, 500);
         
         private const string OpenLongSignalName = "OpenLong";
         private const string OpenShortSignalName = "OpenShort";
@@ -39,6 +39,8 @@ namespace Scripts
         private ConstGen TakeProfitConst = new ConstGen();
         private ConstGen StopLossConst = new ConstGen();
 
+        private const int Lots = 1;
+
         public void Execute(IContext ctx, ISecurity sec)
         {
             // AND|NOT Condition
@@ -47,7 +49,7 @@ namespace Scripts
             Not.Context = ctx;
 
             // Const StopLoss
-            StopLossConst.Value = StopLoss.Value;
+            StopLossConst.Value = StopLossPeriod.Value;
             var stopLossCached = ctx.GetData("StopLoss", new string[]
             {
                 StopLossConst.Value.ToString(),
@@ -55,7 +57,7 @@ namespace Scripts
             }, () => StopLossConst.Execute(ctx));
 
             // Const TakeProfit
-            TakeProfitConst.Value = TakeProfit.Value;
+            TakeProfitConst.Value = TakeProfitPeriod.Value;
             var takeProfitCached = ctx.GetData("TakeProfit", new string[]
             {
                 TakeProfitConst.Value.ToString(),
@@ -65,7 +67,7 @@ namespace Scripts
             // Absolute Commission
             var absCommission = new AbsolutCommission()
             {
-                Commission = 20D
+                Commission = 20
             };
             absCommission.Execute(sec);
 
@@ -125,12 +127,12 @@ namespace Scripts
             for (int i = 0; i < barsCount; i++)
             {
                 bool haveActivePosition = HasPositionActive.Execute(sec, i);
-                bool not = Not.Execute(haveActivePosition, i);
+                bool notPosition = Not.Execute(haveActivePosition, i);
 
                 // Work with Long position
                 IPosition OpenLong = sec.Positions.GetLastActiveForSignal(OpenLongSignalName, i);
                 double entryPriceLong = EntryPriceLong.Execute(OpenLong, i);
-                bool signalToOpenLong = And1.Execute(crossUnder[i], not);
+                bool signalToOpenLong = And1.Execute(crossUnder[i], notPosition);
                 double formulaTakeProfitLong = entryPriceLong + takeProfitCached[i];
                 double formulaStopLossLong = entryPriceLong - stopLossCached[i];
 
@@ -138,7 +140,7 @@ namespace Scripts
                 {
                     if(signalToOpenLong && ctx.TradeFromBar <= i)
                     {
-                        sec.Positions.OpenAtMarket(true, i + 1, 1, OpenLongSignalName, null, PositionExecution.Normal);
+                        sec.Positions.OpenAtMarket(true, i + 1, Lots, OpenLongSignalName, null, PositionExecution.Normal);
                     }
                 }
                 else
@@ -154,7 +156,7 @@ namespace Scripts
                 // Work with Short position
                 IPosition OpenShort = sec.Positions.GetLastActiveForSignal(OpenShortSignalName, i);
                 double entryPriceShort = EntryPriceShort.Execute(OpenShort, i);
-                bool signalToOpenShort = And2.Execute(crossOver[i], not);
+                bool signalToOpenShort = And2.Execute(crossOver[i], notPosition);
                 double formulaTakeProfitShort = entryPriceShort - takeProfitCached[i];
                 double formulaStopLossShort = entryPriceShort + stopLossCached[i];
 
@@ -162,7 +164,7 @@ namespace Scripts
                 {
                     if(signalToOpenShort && ctx.TradeFromBar <= i)
                     {
-                        sec.Positions.OpenAtMarket(false, i + 1, 1, OpenShortSignalName, null, PositionExecution.Normal);
+                        sec.Positions.OpenAtMarket(false, i + 1, Lots, OpenShortSignalName, null, PositionExecution.Normal);
                     }
                 }
                 else
