@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="TSLab.DataSource" Version="2.2.2" />
+    <PackageReference Include="TSLab.Script" Version="2.2.2" />
+    <PackageReference Include="TSLab.Script.Handlers" Version="2.2.2" />
+    <PackageReference Include="TSLab.Utility" Version="2.2.2" />
+  </ItemGroup>
+
+</Project>

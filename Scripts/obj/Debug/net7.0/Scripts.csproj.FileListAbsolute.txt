@@ -1,0 +1,12 @@
+C:\Users\desaw\source\repos\TSLabs\Scripts\bin\Debug\net7.0\Scripts.deps.json
+C:\Users\desaw\source\repos\TSLabs\Scripts\bin\Debug\net7.0\Scripts.dll
+C:\Users\desaw\source\repos\TSLabs\Scripts\bin\Debug\net7.0\Scripts.pdb
+C:\Users\desaw\source\repos\TSLabs\Scripts\obj\Debug\net7.0\Scripts.csproj.AssemblyReference.cache
+C:\Users\desaw\source\repos\TSLabs\Scripts\obj\Debug\net7.0\Scripts.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\desaw\source\repos\TSLabs\Scripts\obj\Debug\net7.0\Scripts.AssemblyInfoInputs.cache
+C:\Users\desaw\source\repos\TSLabs\Scripts\obj\Debug\net7.0\Scripts.AssemblyInfo.cs
+C:\Users\desaw\source\repos\TSLabs\Scripts\obj\Debug\net7.0\Scripts.csproj.CoreCompileInputs.cache
+C:\Users\desaw\source\repos\TSLabs\Scripts\obj\Debug\net7.0\Scripts.dll
+C:\Users\desaw\source\repos\TSLabs\Scripts\obj\Debug\net7.0\refint\Scripts.dll
+C:\Users\desaw\source\repos\TSLabs\Scripts\obj\Debug\net7.0\Scripts.pdb
+C:\Users\desaw\source\repos\TSLabs\Scripts\obj\Debug\net7.0\ref\Scripts.dll
