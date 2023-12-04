@@ -9,7 +9,7 @@ using TSLab.Script.Handlers;
 using TSLab.Script.Helpers;
 using TSLab.Script.Optimization;
 
-namespace TSLab.Scripts
+namespace TSLabs.Scripts.Parabolics
 {
     public class ParabolicStrategyScript : IExternalScript
     {
@@ -45,7 +45,7 @@ namespace TSLab.Scripts
                 ParabolicAccelerationMaxPeriod.ToString(),
                 ParabolicAccelerationMinPeriod.ToString(),
                 ParabolicAccelerationStepPeriod.ToString()
-            }, () => list );
+            }, () => list);
 
             var barsCount = sec.Bars.Count();
             if (!ctx.IsLastBarUsed)
@@ -62,13 +62,13 @@ namespace TSLab.Scripts
                 var activeLongPosition = sec.Positions.GetLastActiveForSignal(OpenLong, i);
                 var activeShortPosition = sec.Positions.GetLastActiveForSignal(OpenShort, i);
 
-                if (activeLongPosition == null )
+                if (activeLongPosition == null)
                 {
-                    if(signalToOpenLong)
+                    if (signalToOpenLong)
                     {
                         sec.Positions.BuyAtMarket(i + 1, 1, OpenLong);
                     }
-                } 
+                }
                 else
                 {
                     if (signalToOpenShort)

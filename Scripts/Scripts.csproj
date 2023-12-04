@@ -13,4 +13,10 @@
     <PackageReference Include="TSLab.Utility" Version="2.2.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="vvTSLtools.2.0">
+      <HintPath>..\..\..\..\AppData\Local\TSLab\TSLab 2.0\Handlers\vvTSLtools.2.0.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>

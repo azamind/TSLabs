@@ -7,7 +7,7 @@ using TSLab.Script;
 using TSLab.Script.Handlers;
 using TSLab.Script.Optimization;
 
-namespace Scripts
+namespace TSLabs.Scripts.Parabolics
 {
     public sealed class ParabolicTakeStopAbsoluteStrategyScript : IExternalScript
     {
@@ -16,7 +16,7 @@ namespace Scripts
         public OptimProperty ParabolicAccelerationStepPeriod = new OptimProperty(0.01, 0.001, 0.1, 0.001);
         public OptimProperty StopLossPeriod = new OptimProperty(200, 200, 2000, 200);
         public OptimProperty TakeProfitPeriod = new OptimProperty(2000, 500, 5000, 500);
-        
+
         private const string OpenLongSignalName = "OpenLong";
         private const string OpenShortSignalName = "OpenShort";
         private const string CloseLongTakeProfit = "CloseLongTakeProfit";
@@ -29,13 +29,13 @@ namespace Scripts
 
         private CrossUnder CrossUnder = new CrossUnder();
         private CrossOver CrossOver = new CrossOver();
-        
+
         private HasPositionActive HasPositionActive = new HasPositionActive();
 
         private And And1 = new And();
         private And And2 = new And();
         private Not Not = new Not();
-        
+
         private ConstGen TakeProfitConst = new ConstGen();
         private ConstGen StopLossConst = new ConstGen();
 
@@ -138,14 +138,14 @@ namespace Scripts
 
                 if (OpenLong == null)
                 {
-                    if(signalToOpenLong && ctx.TradeFromBar <= i)
+                    if (signalToOpenLong && ctx.TradeFromBar <= i)
                     {
                         sec.Positions.OpenAtMarket(true, i + 1, Lots, OpenLongSignalName, null, PositionExecution.Normal);
                     }
                 }
                 else
                 {
-                    if(OpenLong.EntryBarNum <= i)
+                    if (OpenLong.EntryBarNum <= i)
                     {
                         OpenLong.CloseAtProfit(i + 1, formulaTakeProfitLong, CloseLongTakeProfit);
                         OpenLong.CloseAtStop(i + 1, formulaStopLossLong, CloseLongStopLoss);
@@ -160,16 +160,16 @@ namespace Scripts
                 double formulaTakeProfitShort = entryPriceShort - takeProfitCached[i];
                 double formulaStopLossShort = entryPriceShort + stopLossCached[i];
 
-                if(OpenShort == null)
+                if (OpenShort == null)
                 {
-                    if(signalToOpenShort && ctx.TradeFromBar <= i)
+                    if (signalToOpenShort && ctx.TradeFromBar <= i)
                     {
                         sec.Positions.OpenAtMarket(false, i + 1, Lots, OpenShortSignalName, null, PositionExecution.Normal);
                     }
                 }
                 else
                 {
-                    if(OpenShort.EntryBarNum <= i) 
+                    if (OpenShort.EntryBarNum <= i)
                     {
                         OpenShort.CloseAtProfit(i + 1, formulaTakeProfitShort, CloseShortTakeProfit);
                         OpenShort.CloseAtStop(i + 1, formulaStopLossShort, CloseShortStopLoss);

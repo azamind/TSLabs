@@ -7,7 +7,7 @@ using TSLab.Script;
 using TSLab.Script.Handlers;
 using TSLab.Script.Optimization;
 
-namespace TSLab.Scripts
+namespace TSLabs.Scripts.Parabolics
 {
     public class ParabolicTakeStopBreakevenAbsStrategyScript : IExternalScript
     {
@@ -130,7 +130,7 @@ namespace TSLab.Scripts
 
             // rm last bar for generate signal
             int barsCount = source.Bars.Count();
-            if(!context.IsLastBarUsed)
+            if (!context.IsLastBarUsed)
             {
                 barsCount--;
             }
