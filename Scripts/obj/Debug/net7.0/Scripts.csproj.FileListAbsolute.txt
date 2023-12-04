@@ -10,3 +10,7 @@ C:\Users\desaw\source\repos\TSLabs\Scripts\obj\Debug\net7.0\Scripts.dll
 C:\Users\desaw\source\repos\TSLabs\Scripts\obj\Debug\net7.0\refint\Scripts.dll
 C:\Users\desaw\source\repos\TSLabs\Scripts\obj\Debug\net7.0\Scripts.pdb
 C:\Users\desaw\source\repos\TSLabs\Scripts\obj\Debug\net7.0\ref\Scripts.dll
+C:\Users\desaw\source\repos\TSLabs\Scripts\bin\Debug\net7.0\vvTSLtools.2.0.dll
+C:\Users\desaw\source\repos\TSLabs\Scripts\bin\Debug\net7.0\vvTSLtools.2.0.pdb
+C:\Users\desaw\source\repos\TSLabs\Scripts\obj\Debug\net7.0\Scripts.sourcelink.json
+C:\Users\desaw\source\repos\TSLabs\Scripts\obj\Debug\net7.0\Scripts.csproj.CopyComplete

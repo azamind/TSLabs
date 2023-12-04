@@ -11,7 +11,8 @@
           "TSLab.DataSource": "2.2.2",
           "TSLab.Script": "2.2.2",
           "TSLab.Script.Handlers": "2.2.2",
-          "TSLab.Utility": "2.2.2"
+          "TSLab.Utility": "2.2.2",
+          "vvTSLtools.2.0": "1.0.0.0"
         },
         "runtime": {
           "Scripts.dll": {}
@@ -77,6 +78,14 @@
             "fileVersion": "2.2.2.0"
           }
         }
+      },
+      "vvTSLtools.2.0/1.0.0.0": {
+        "runtime": {
+          "vvTSLtools.2.0.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
       }
     }
   },
@@ -134,6 +143,11 @@
       "sha512": "sha512-z7GHRTtqQPrKewLYqg8H8iuKFXKjzSwmbvBSP3DmBUpKbhKT97zjNRbyZXoPSAHjDPSGCdEJMmBgz8y93O3rDw==",
       "path": "tslab.utility/2.2.2",
       "hashPath": "tslab.utility.2.2.2.nupkg.sha512"
+    },
+    "vvTSLtools.2.0/1.0.0.0": {
+      "type": "reference",
+      "serviceable": false,
+      "sha512": ""
     }
   }
 }
