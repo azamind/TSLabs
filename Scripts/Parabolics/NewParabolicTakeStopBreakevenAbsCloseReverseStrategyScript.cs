@@ -23,17 +23,24 @@ namespace TSLabs.Scripts.Parabolics
         private const string CloseShortBreakeven = "CloseShortBreakeven";
         private const string CloseShortReverse = "CloseShortReverse";
 
-        public OptimProperty ParabolicAccelerationMaxPeriod = new OptimProperty(0.4, 0.01, 0.4, 0.01);
-        public OptimProperty ParabolicAccelerationStepPeriod = new OptimProperty(0.001, 0.001, 0.1, 0.001);
-        public OptimProperty TakeProfitPeriod = new OptimProperty(2000, 500, 5000, 500);
-        public OptimProperty StopLossPeriod = new OptimProperty(1000, 100, 2000, 200);
-        public OptimProperty BreakevenPeriod = new OptimProperty(500, 100, 1000, 100);
-        public OptimProperty VolumeMinPeriod = new OptimProperty(1500, 1000, 10000, 500);
+        private const int BreakevenFixedValue = 200;
+
+        public OptimProperty ParabolicAccelerationMaxPeriod = new OptimProperty(0.4, false, 0.01, 0.4, 0.01, 1);
+        public OptimProperty ParabolicAccelerationStepPeriod = new OptimProperty(0.001, false, 0.001, 0.1, 0.001, 1);
+        public OptimProperty TakeProfitPeriod = new OptimProperty(2000, false, 500, 5000, 500, 1);
+        public OptimProperty StopLossPeriod = new OptimProperty(1000, false, 100, 2000, 200, 1);
+        public OptimProperty BreakevenPeriod = new OptimProperty(500, false, 100, 1000, 100, 1);
+        public OptimProperty VolumeMinPeriod = new OptimProperty(1500, false, 1000, 10000, 500, 1);
+        public OptimProperty CandleSizePeriod = new OptimProperty(1000, false, 100, 2000, 200, 1);
+        public IntOptimProperty AverageTrueRangePeriod = new IntOptimProperty(20, false, 10, 200, 5);
+        public OptimProperty CoefficientPeriod = new OptimProperty(1.4, false, 0.1, 2, 0.1, 1);
 
         private ConstGen TakeProfitConst = new ConstGen();
         private ConstGen StopLossConst = new ConstGen();
         private ConstGen BreakevenConst = new ConstGen();
         private ConstGen VolumeMinConst = new ConstGen();
+        private ConstGen CandleSizeConst = new ConstGen();
+        private ConstGen CoefficientConst = new ConstGen();
 
         private CrossUnder CrossUnder = new CrossUnder();
         private CrossOver CrossOver = new CrossOver();
@@ -125,8 +132,24 @@ namespace TSLabs.Scripts.Parabolics
                 "Source"
             }, () => VolumeMinConst.Execute(context));
 
+            // Candle Size
+            CandleSizeConst.Value = CandleSizePeriod.Value;
+            IList<double> candleSizeCached = context.GetData("CandleSize", new string[]
+            {
+                CandleSizeConst.Value.ToString(),
+                "Source"
+            }, () => CandleSizeConst.Execute(context));
+
+            // Coefficient
+            CoefficientConst.Value = CoefficientPeriod.Value;
+            IList<double> coefficientCached = context.GetData("Coefficient", new string[]
+            {
+                CoefficientConst.Value.ToString(),
+                "Source"
+            }, () => CoefficientConst.Execute(context));
+
             // Parabolic indicator
-            var parabolic = new vvTSLtools.Parabolic()
+            vvTSLtools.Parabolic parabolic = new vvTSLtools.Parabolic()
             {
                 Context = context,
                 AccelerationMax = ParabolicAccelerationMaxPeriod.Value,
@@ -137,6 +160,27 @@ namespace TSLabs.Scripts.Parabolics
                 ParabolicAccelerationMaxPeriod.ToString(),
                 ParabolicAccelerationStepPeriod.ToString()
             }, () => parabolic.Execute(source));
+
+            // True Range
+            TrueRange trueRange = new TrueRange()
+            {
+                Context = context
+            };
+            IList<double> trueRangeCached = context.GetData(nameof(TrueRange), new string[]
+            {
+                "Source"
+            }, () => trueRange.Execute(source));
+
+            // Average True Range
+            AverageTrueRangeNew averageTrueRange = new AverageTrueRangeNew()
+            {
+                Context = context
+            };
+            averageTrueRange.Period = AverageTrueRangePeriod.Value;
+            IList<double> averageTrueRangeCached = context.GetData(nameof(AverageTrueRangeNew), new string[]
+            {
+                "Source"
+            }, () => averageTrueRange.Execute(source));
 
             // Cross Under
             CrossUnder.Context = context;
@@ -171,11 +215,13 @@ namespace TSLabs.Scripts.Parabolics
                 bool hasPositionActive = HasPositionActive.Execute(source, i);
                 bool hasNotPositionActive = Not.Execute(hasPositionActive, i);
                 bool volumeIsIncrease = volumeCached[i] > volumeMinCached[i];
+                bool trueRangeIsIncrease = trueRangeCached[i] >= candleSizeCached[i];
+                bool trueRangeIsIncreaseThanAverageTrueRange = trueRangeCached[i] >= averageTrueRangeCached[i] * coefficientCached[i];
 
                 // Work With Long Positions
                 IPosition openLong = source.Positions.GetLastActiveForSignal(OpenLongSignalName, i);
                 double entryPriceLong = EntryPriceLong.Execute(openLong, i);
-                bool signalToOpenLongPosition = And1.Execute(crossUnderCached[i], closePriceCached[i] > openPriceCached[i], volumeIsIncrease);
+                bool signalToOpenLongPosition = And1.Execute(crossUnderCached[i], closePriceCached[i] > openPriceCached[i], volumeIsIncrease, trueRangeIsIncrease, trueRangeIsIncreaseThanAverageTrueRange);
                 double formulaTakeProfitLong = entryPriceLong + takeProfitCached[i];
                 double formulaStopLossLong = entryPriceLong - stopLossCached[i];
                 double formulaBreakevenLong = entryPriceLong + breakevenCached[i];
@@ -203,7 +249,7 @@ namespace TSLabs.Scripts.Parabolics
                         {
                             if (isActiveBreakevenLong)
                             {
-                                openLong.CloseAtStop(i + 1, entryPriceLong, CloseLongBreakeven);
+                                openLong.CloseAtStop(i + 1, entryPriceLong + BreakevenFixedValue, CloseLongBreakeven);
                             }
                             else
                             {
@@ -223,7 +269,7 @@ namespace TSLabs.Scripts.Parabolics
                 // Work With Short Positions
                 IPosition openShort = source.Positions.GetLastActiveForSignal(OpenShortSignalName, i);
                 double entryPriceShort = EntryPriceShort.Execute(openShort, i);
-                bool signalToOpenShortPosition = And2.Execute(crossOverCached[i], closePriceCached[i] < openPriceCached[i], volumeIsIncrease);
+                bool signalToOpenShortPosition = And2.Execute(crossOverCached[i], closePriceCached[i] < openPriceCached[i], volumeIsIncrease, trueRangeIsIncrease, trueRangeIsIncreaseThanAverageTrueRange);
                 double formulaTakeProfitShort = entryPriceShort - takeProfitCached[i];
                 double formulaStopLossShort = entryPriceShort + stopLossCached[i];
                 double formulaBreakevenShort = entryPriceShort - breakevenCached[i];
@@ -251,7 +297,7 @@ namespace TSLabs.Scripts.Parabolics
                         {
                             if (isActiveBreakevenShort)
                             {
-                                openShort.CloseAtStop(i + 1, entryPriceShort, CloseShortBreakeven);
+                                openShort.CloseAtStop(i + 1, entryPriceShort - BreakevenFixedValue, CloseShortBreakeven);
                             }
                             else
                             {
