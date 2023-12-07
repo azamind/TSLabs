@@ -14,22 +14,20 @@ namespace Scripts.Parabolics.Rts
         private IContext? Context { get; set; }
         private ISecurity? Source { get; set; }
 
-        public OptimProperty PeriodTakeProfit = new OptimProperty(2000, 500, 5000, 500);
-        public OptimProperty PeriodStopLoss = new OptimProperty(200, 200, 2000, 200);
         public OptimProperty PeriodBreakevenPass = new OptimProperty(100, 100, 1000, 100);
         public OptimProperty PeriodParabolicAccelerationMax = new OptimProperty(0.4, false, 0.01, 0.4, 0.01, 1);
         public OptimProperty PeriodParabolicAccelerationStep = new OptimProperty(0.001, false, 0.001, 0.1, 0.001, 1);
+        public OptimProperty PeriodTrailStopAbsStopLoss = new OptimProperty(1000, 200, 5000, 200, 1);
+        public OptimProperty PeriodTrailStopAbsTrailEnable = new OptimProperty(1000, 200, 5000, 200, 1);
+        public OptimProperty PeriodTrailStopAbsTrailLoss = new OptimProperty(1000, 200, 5000, 200, 1);
 
         private const string SignalNameOpenLongIfMore = "OpenLongIfMore";
-        private const string SignalNameCloseLongTakeProfit = "CloseLongTakeProfit";
-        private const string SignalNameCloseLongStopLoss = "CloseLongStopLoss";
+        private const string SignalNameCloseLong = "CloseLong";
+        private const string SignalNameCloseLongTrail = "CloseLongTrail";
 
         private const string SignalNameOpenShortIfLess = "OpenShortIfLess";
-        private const string SignalNameCloseShortTakeProfit = "CloseShortTakeProfit";
-        private const string SignalNameCloseShortStopLoss = "CloseShortStopLoss";
-
-        private EntryPrice EntryPriceLong = new EntryPrice();
-        private EntryPrice EntryPriceShort = new EntryPrice();
+        private const string SignalNameCloseShort = "CloseShort";
+        private const string SignalNameCloseShortTrail = "CloseShortTrail";
 
         private const double Lots = 1;
 
@@ -43,12 +41,12 @@ namespace Scripts.Parabolics.Rts
             IList<double> cacheVolume = initVolume();
             IList<double> cacheClose = initClose();
             IList<double> cacheOpen = initOpen();
-            IList<double> cacheTakeProfit = initTakeProfit();
-            IList<double> cacheStopLoss = initStopLoss();
             IList<double> cacheBreakevenPass = initBreakevenPass();
             IList<double> cacheParabolic = initParabolic();
             IList<bool> cacheCrossUnder = initCrossUnder(cacheParabolic, cacheClose);
             IList<bool> cacheCrossOver = initCrossOver(cacheParabolic, cacheClose);
+            TrailStopAbs trailStopAbsLong = initTrailStopAbsLong();
+            TrailStopAbs trailStopAbsShort = initTrailStopAbsShort();
 
             int barsCount = Source.Bars.Count();
             if (!Context.IsLastBarUsed)
@@ -61,11 +59,13 @@ namespace Scripts.Parabolics.Rts
                 // Work With Long Positions
                 IPosition openLongIfMore = Source.Positions.GetLastActiveForSignal(SignalNameOpenLongIfMore, i);
                 bool signalToOpenLong = cacheCrossUnder[i];
-                double entryPriceLong = EntryPriceLong.Execute(openLongIfMore, i);
-                double formulaLongStopLoss = entryPriceLong - cacheStopLoss[i];
-                double formulaLongTakeProfit = entryPriceLong + cacheTakeProfit[i];
+                double trailStopAbsExecuteLong = trailStopAbsLong.Execute(openLongIfMore, i);
+                // Work With Short Positions
+                IPosition openShortIfLess = Source.Positions.GetLastActiveForSignal(SignalNameOpenShortIfLess, i);
+                bool signalToOpenShort = cacheCrossOver[i];
+                double trailStopAbsExecuteShort = trailStopAbsShort.Execute(openShortIfLess, i);
 
-                if(openLongIfMore == null)
+                if (openLongIfMore == null)
                 {
                     if(signalToOpenLong)
                     {
@@ -74,17 +74,12 @@ namespace Scripts.Parabolics.Rts
                 } 
                 else
                 {
-                    openLongIfMore.CloseAtProfit(i + 1, formulaLongTakeProfit, SignalNameCloseLongTakeProfit);
-                    openLongIfMore.CloseAtStop(i + 1, formulaLongStopLoss, SignalNameCloseLongStopLoss);
+                    if(signalToOpenShort)
+                    {
+                        openLongIfMore.CloseAtMarket(i + 1, SignalNameCloseLong);
+                    }
+                    openLongIfMore.CloseAtStop(i + 1, trailStopAbsExecuteLong, SignalNameCloseLongTrail);
                 }
-
-
-                // Work With Short Positions
-                IPosition openShortIfLess = Source.Positions.GetLastActiveForSignal(SignalNameOpenShortIfLess, i);
-                bool signalToOpenShort = cacheCrossOver[i];
-                double entryPriceShort = EntryPriceShort.Execute(openShortIfLess, i);
-                double formulaShortStopLoss = entryPriceShort + cacheStopLoss[i];
-                double formulaShortTakeProfit = entryPriceShort - cacheTakeProfit[i];
 
                 if(openShortIfLess == null)
                 {
@@ -95,8 +90,11 @@ namespace Scripts.Parabolics.Rts
                 }
                 else
                 {
-                    openShortIfLess.CloseAtProfit(i + 1, formulaShortTakeProfit, SignalNameCloseShortTakeProfit);
-                    openShortIfLess.CloseAtStop(i + 1, formulaShortStopLoss, SignalNameCloseShortStopLoss);
+                    if(signalToOpenLong)
+                    {
+                        openShortIfLess.CloseAtMarket(i + 1, SignalNameCloseShort);
+                    }
+                    openShortIfLess.CloseAtStop(i + 1, trailStopAbsExecuteShort, SignalNameCloseShortTrail);
                 }
             }
 
@@ -151,28 +149,6 @@ namespace Scripts.Parabolics.Rts
         }
 
 
-        private IList<double> initTakeProfit()
-        {
-            ConstGen ConstTakeProfit = new ConstGen();
-            ConstTakeProfit.Value = PeriodTakeProfit.Value;
-            return Context?.GetData("TakeProfit", new string[]
-            {
-                ConstTakeProfit.Value.ToString(),
-                "Source"
-            }, () => ConstTakeProfit.Execute(Source)) ?? new List<double>();
-        }
-
-        private IList<double> initStopLoss()
-        {
-            ConstGen ConstStopLoss = new ConstGen();
-            ConstStopLoss.Value = PeriodStopLoss.Value;
-            return Context?.GetData("StopLoss", new string[]
-            {
-                ConstStopLoss.Value.ToString(),
-                "Source"
-            }, () => ConstStopLoss.Execute(Source)) ?? new List<double>();
-        }
-
         private IList<double> initBreakevenPass()
         {
             ConstGen ConstBreakevenPass = new ConstGen();
@@ -197,6 +173,27 @@ namespace Scripts.Parabolics.Rts
                 PeriodParabolicAccelerationMax.Value.ToString(),
                 PeriodParabolicAccelerationStep.Value.ToString()
             }, () => parabolic.Execute(Source)) ?? new List<double>();
+        }
+
+        private TrailStopAbs initTrailStopAbsLong()
+        {
+           return new TrailStopAbs() { 
+               StopLoss = PeriodTrailStopAbsStopLoss.Value,
+               TrailEnable = PeriodTrailStopAbsTrailEnable.Value,
+               TrailLoss = PeriodTrailStopAbsTrailLoss.Value,
+               UseCalcPrice = false
+           };
+        }
+
+        private TrailStopAbs initTrailStopAbsShort()
+        {
+            return new TrailStopAbs()
+            {
+                StopLoss = PeriodTrailStopAbsStopLoss.Value,
+                TrailEnable = PeriodTrailStopAbsTrailEnable.Value,
+                TrailLoss = PeriodTrailStopAbsTrailLoss.Value,
+                UseCalcPrice = false
+            };
         }
 
         private IList<bool> initCrossUnder(IList<double> cacheParabolic, IList<double> cacheClose)
