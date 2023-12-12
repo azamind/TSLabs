@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.VisualBasic;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -21,6 +22,9 @@ namespace Scripts.Parabolics.Rts
         public OptimProperty PeriodTrailStopAbsTrailEnable = new OptimProperty(1000, 200, 5000, 200, 1);
         public OptimProperty PeriodTrailStopAbsTrailLoss = new OptimProperty(1000, 200, 5000, 200, 1);
 
+        private EntryPrice EntryPriceLong = new EntryPrice();
+        private EntryPrice EntryPriceShort = new EntryPrice();
+
         private const string SignalNameOpenLongIfMore = "OpenLongIfMore";
         private const string SignalNameCloseLong = "CloseLong";
         private const string SignalNameCloseLongTrail = "CloseLongTrail";
@@ -29,7 +33,12 @@ namespace Scripts.Parabolics.Rts
         private const string SignalNameCloseShort = "CloseShort";
         private const string SignalNameCloseShortTrail = "CloseShortTrail";
 
+        private const string SignalNameCloseLongBreakeven = "CloseLongBreakeven";
+        private const string SignalNameCloseShortBreakeven = "CloseShortBreakeven";
+
         private const double Lots = 1;
+
+        private const int BreakevenFixedValue = 200;
 
         public void Execute(IContext ctx, ISecurity sec)
         {
@@ -54,20 +63,28 @@ namespace Scripts.Parabolics.Rts
                 barsCount--;
             }
 
+            bool isActiveBreakevenLong = false;
+            bool isActiveBreakevenShort = false;
+
             for (int i = 0; i < barsCount; i++)
             {
                 // Work With Long Positions
                 IPosition openLongIfMore = Source.Positions.GetLastActiveForSignal(SignalNameOpenLongIfMore, i);
+                double entryPriceLong = EntryPriceLong.Execute(openLongIfMore, i);
                 bool signalToOpenLong = cacheCrossUnder[i] && cacheClose[i] > cacheOpen[i];
                 double trailStopAbsExecuteLong = trailStopAbsLong.Execute(openLongIfMore, i);
+                double formulaBreakevenLong = entryPriceLong + cacheBreakevenPass[i];
                 // Work With Short Positions
                 IPosition openShortIfLess = Source.Positions.GetLastActiveForSignal(SignalNameOpenShortIfLess, i);
+                double entryPriceShort = EntryPriceShort.Execute(openShortIfLess, i);
                 bool signalToOpenShort = cacheCrossOver[i] && cacheClose[i] < cacheOpen[i];
                 double trailStopAbsExecuteShort = trailStopAbsShort.Execute(openShortIfLess, i);
+                double formulaBreakevenShort = entryPriceShort - cacheBreakevenPass[i];
 
                 if (openLongIfMore == null)
                 {
-                    if(signalToOpenLong)
+                    isActiveBreakevenLong = false;
+                    if (signalToOpenLong)
                     {
                         Source.Positions.OpenIfGreater(true, i + 1, Lots, cacheParabolic[i], SignalNameOpenLongIfMore, null);
                     }
@@ -78,23 +95,56 @@ namespace Scripts.Parabolics.Rts
                     {
                         openLongIfMore.CloseAtMarket(i + 1, SignalNameCloseLong);
                     }
-                    openLongIfMore.CloseAtStop(i + 1, trailStopAbsExecuteLong, SignalNameCloseLongTrail);
+                    else
+                    {
+                        if (isActiveBreakevenLong)
+                        {
+                            openLongIfMore.CloseAtStop(i + 1, entryPriceLong + BreakevenFixedValue, SignalNameCloseLongBreakeven);
+                        }
+                        else
+                        {
+                            if (cacheClose[i] >= formulaBreakevenLong)
+                            {
+                                isActiveBreakevenLong = true;
+                            }
+                        }
+
+                        openLongIfMore.CloseAtStop(i + 1, trailStopAbsExecuteLong, SignalNameCloseLongTrail);
+                    }
+                    
                 }
 
-                if(openShortIfLess == null)
+                if (openShortIfLess == null)
                 {
-                    if(signalToOpenShort)
+                    isActiveBreakevenShort = false;
+                    if (signalToOpenShort)
                     {
                         Source.Positions.OpenIfLess(false, i + 1, Lots, cacheParabolic[i], SignalNameOpenShortIfLess, null);
                     }
                 }
                 else
                 {
-                    if(signalToOpenLong)
+                    if (signalToOpenLong)
                     {
                         openShortIfLess.CloseAtMarket(i + 1, SignalNameCloseShort);
                     }
-                    openShortIfLess.CloseAtStop(i + 1, trailStopAbsExecuteShort, SignalNameCloseShortTrail);
+                    else
+                    {
+
+                        if (isActiveBreakevenShort)
+                        {
+                            openShortIfLess.CloseAtStop(i + 1, entryPriceShort - BreakevenFixedValue, SignalNameCloseShortBreakeven);
+                        }
+                        else
+                        {
+                            if (cacheClose[i] <= formulaBreakevenShort)
+                            {
+                                isActiveBreakevenShort = true;
+                            }
+                        }
+                        openShortIfLess.CloseAtStop(i + 1, trailStopAbsExecuteShort, SignalNameCloseShortTrail);
+                    }
+
                 }
             }
 
