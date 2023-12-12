@@ -58,11 +58,11 @@ namespace Scripts.Parabolics.Rts
             {
                 // Work With Long Positions
                 IPosition openLongIfMore = Source.Positions.GetLastActiveForSignal(SignalNameOpenLongIfMore, i);
-                bool signalToOpenLong = cacheCrossUnder[i];
+                bool signalToOpenLong = cacheCrossUnder[i] && cacheClose[i] > cacheOpen[i];
                 double trailStopAbsExecuteLong = trailStopAbsLong.Execute(openLongIfMore, i);
                 // Work With Short Positions
                 IPosition openShortIfLess = Source.Positions.GetLastActiveForSignal(SignalNameOpenShortIfLess, i);
-                bool signalToOpenShort = cacheCrossOver[i];
+                bool signalToOpenShort = cacheCrossOver[i] && cacheClose[i] < cacheOpen[i];
                 double trailStopAbsExecuteShort = trailStopAbsShort.Execute(openShortIfLess, i);
 
                 if (openLongIfMore == null)
