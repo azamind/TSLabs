@@ -21,6 +21,7 @@ namespace Scripts.Parabolics.Rts
         public OptimProperty PeriodTrailStopAbsStopLoss = new OptimProperty(1000, 200, 5000, 200, 1);
         public OptimProperty PeriodTrailStopAbsTrailEnable = new OptimProperty(1000, 200, 5000, 200, 1);
         public OptimProperty PeriodTrailStopAbsTrailLoss = new OptimProperty(1000, 200, 5000, 200, 1);
+        public OptimProperty PeriodVolumeMin = new OptimProperty(1500, false, 1000, 10000, 500, 1);
 
         private EntryPrice EntryPriceLong = new EntryPrice();
         private EntryPrice EntryPriceShort = new EntryPrice();
@@ -48,6 +49,7 @@ namespace Scripts.Parabolics.Rts
             setAbsCommission();
 
             IList<double> cacheVolume = initVolume();
+            IList<double> cacheVolumeMin = initVolumeMin();
             IList<double> cacheClose = initClose();
             IList<double> cacheOpen = initOpen();
             IList<double> cacheBreakevenPass = initBreakevenPass();
@@ -71,13 +73,15 @@ namespace Scripts.Parabolics.Rts
                 // Work With Long Positions
                 IPosition openLongIfMore = Source.Positions.GetLastActiveForSignal(SignalNameOpenLongIfMore, i);
                 double entryPriceLong = EntryPriceLong.Execute(openLongIfMore, i);
-                bool signalToOpenLong = cacheCrossUnder[i] && cacheClose[i] > cacheOpen[i];
+                bool volumeIsIncrease = cacheVolume[i] >= cacheVolumeMin[i];
+                bool signalToOpenLong = cacheCrossUnder[i] && cacheClose[i] > cacheOpen[i] && volumeIsIncrease;
                 double trailStopAbsExecuteLong = trailStopAbsLong.Execute(openLongIfMore, i);
                 double formulaBreakevenLong = entryPriceLong + cacheBreakevenPass[i];
+
                 // Work With Short Positions
                 IPosition openShortIfLess = Source.Positions.GetLastActiveForSignal(SignalNameOpenShortIfLess, i);
                 double entryPriceShort = EntryPriceShort.Execute(openShortIfLess, i);
-                bool signalToOpenShort = cacheCrossOver[i] && cacheClose[i] < cacheOpen[i];
+                bool signalToOpenShort = cacheCrossOver[i] && cacheClose[i] < cacheOpen[i] && volumeIsIncrease;
                 double trailStopAbsExecuteShort = trailStopAbsShort.Execute(openShortIfLess, i);
                 double formulaBreakevenShort = entryPriceShort - cacheBreakevenPass[i];
 
@@ -150,7 +154,7 @@ namespace Scripts.Parabolics.Rts
 
             if (Context.IsOptimization) return;
 
-            graphRendering(cacheParabolic, cacheVolume);
+            graphRendering(cacheParabolic, cacheVolume, cacheVolumeMin);
         }
 
         private void setAbsCommission()
@@ -172,6 +176,17 @@ namespace Scripts.Parabolics.Rts
             {
                 "Source"
             }, () => volume.Execute(Source)) ?? new List<double>();
+        }
+
+        private IList<double> initVolumeMin()
+        {
+            ConstGen ConstVolumeMin = new ConstGen();
+            ConstVolumeMin.Value = PeriodVolumeMin.Value;
+            return Context?.GetData("VolumeMin", new string[]
+            {
+                ConstVolumeMin.Value.ToString(),
+                "Source"
+            }, () => ConstVolumeMin.Execute(Context)) ?? new List<double>();
         }
 
         private IList<double> initClose()
@@ -274,7 +289,7 @@ namespace Scripts.Parabolics.Rts
             }, () => crossOver.Execute(cacheParabolic, cacheClose)) ?? new List<bool>();
         }
 
-        private void graphRendering(IList<double> cacheParabolic, IList<double> cacheVolume)
+        private void graphRendering(IList<double> cacheParabolic, IList<double> cacheVolume, IList<double> cacheVolumeMin)
         {
             IGraphList graphParabolic = Context.First.AddList(nameof(vvTSLtools.Parabolic), cacheParabolic, ListStyles.POINT, ScriptColors.Magenta, LineStyles.DOT, PaneSides.RIGHT);
             graphParabolic.Thickness = 3;
@@ -287,6 +302,9 @@ namespace Scripts.Parabolics.Rts
             volumePanel.HideLegend = false;
             IGraphList? graphVolume = volumePanel.AddList(nameof(Volume), cacheVolume, ListStyles.HISTOHRAM, -16711732, LineStyles.SOLID, PaneSides.RIGHT);
             graphVolume.Autoscaling = true;
+            IGraphList? volumeMinLine = volumePanel.AddList("VolumeMin", cacheVolumeMin, ListStyles.LINE, ScriptColors.DarkRed, LineStyles.SOLID, PaneSides.RIGHT);
+            volumeMinLine.Autoscaling = true;
+            volumeMinLine.Thickness = 3;
 
             volumePanel.UpdatePrecision(PaneSides.RIGHT, 0);
         }
