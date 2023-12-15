@@ -22,6 +22,7 @@ namespace Scripts.Parabolics.Rts
         public OptimProperty PeriodTrailStopAbsTrailEnable = new OptimProperty(1000, 200, 5000, 200, 1);
         public OptimProperty PeriodTrailStopAbsTrailLoss = new OptimProperty(1000, 200, 5000, 200, 1);
         public OptimProperty PeriodVolumeMin = new OptimProperty(1500, false, 1000, 10000, 500, 1);
+        public OptimProperty PeriodCandleSize = new OptimProperty(500, false, 100, 1000, 100, 1);
 
         private EntryPrice EntryPriceLong = new EntryPrice();
         private EntryPrice EntryPriceShort = new EntryPrice();
@@ -54,6 +55,8 @@ namespace Scripts.Parabolics.Rts
             IList<double> cacheOpen = initOpen();
             IList<double> cacheBreakevenPass = initBreakevenPass();
             IList<double> cacheParabolic = initParabolic();
+            IList<double> cacheCandleSize = initCandleSize();
+            IList<double> cacheTrueRange = initTrueRange();
             IList<bool> cacheCrossUnder = initCrossUnder(cacheParabolic, cacheClose);
             IList<bool> cacheCrossOver = initCrossOver(cacheParabolic, cacheClose);
             TrailStopAbs trailStopAbsLong = initTrailStopAbsLong();
@@ -70,18 +73,26 @@ namespace Scripts.Parabolics.Rts
 
             for (int i = 0; i < barsCount; i++)
             {
+                bool volumeIsIncrease = cacheVolume[i] >= cacheVolumeMin[i];
+                bool trueRangIsIncrease = cacheTrueRange[i] >= cacheCandleSize[i];
+
                 // Work With Long Positions
                 IPosition openLongIfMore = Source.Positions.GetLastActiveForSignal(SignalNameOpenLongIfMore, i);
                 double entryPriceLong = EntryPriceLong.Execute(openLongIfMore, i);
-                bool volumeIsIncrease = cacheVolume[i] >= cacheVolumeMin[i];
-                bool signalToOpenLong = cacheCrossUnder[i] && cacheClose[i] > cacheOpen[i] && volumeIsIncrease;
+                bool signalToOpenLong = cacheCrossUnder[i] 
+                    && cacheClose[i] > cacheOpen[i] 
+                    && volumeIsIncrease 
+                    && trueRangIsIncrease;
                 double trailStopAbsExecuteLong = trailStopAbsLong.Execute(openLongIfMore, i);
                 double formulaBreakevenLong = entryPriceLong + cacheBreakevenPass[i];
 
                 // Work With Short Positions
                 IPosition openShortIfLess = Source.Positions.GetLastActiveForSignal(SignalNameOpenShortIfLess, i);
                 double entryPriceShort = EntryPriceShort.Execute(openShortIfLess, i);
-                bool signalToOpenShort = cacheCrossOver[i] && cacheClose[i] < cacheOpen[i] && volumeIsIncrease;
+                bool signalToOpenShort = cacheCrossOver[i] 
+                    && cacheClose[i] < cacheOpen[i] 
+                    && volumeIsIncrease 
+                    && trueRangIsIncrease;
                 double trailStopAbsExecuteShort = trailStopAbsShort.Execute(openShortIfLess, i);
                 double formulaBreakevenShort = entryPriceShort - cacheBreakevenPass[i];
 
@@ -287,6 +298,29 @@ namespace Scripts.Parabolics.Rts
                 PeriodParabolicAccelerationStep.Value.ToString(),
                 "Source"
             }, () => crossOver.Execute(cacheParabolic, cacheClose)) ?? new List<bool>();
+        }
+
+        private IList<double> initCandleSize()
+        {
+            ConstGen ConstCandleSize = new ConstGen();
+            ConstCandleSize.Value = PeriodCandleSize.Value;
+            return Context?.GetData("CandleSize", new string[]
+            {
+                ConstCandleSize.Value.ToString(),
+                "Source"
+            }, () => ConstCandleSize.Execute(Context)) ?? new List<double>();
+        }
+
+        private IList<double> initTrueRange()
+        {
+            TrueRange trueRange = new TrueRange()
+            {
+                Context = Context
+            };
+            return Context?.GetData(nameof(TrueRange), new string[]
+            {
+                "Source"
+            }, () => trueRange.Execute(Source)) ?? new List<double>();
         }
 
         private void graphRendering(IList<double> cacheParabolic, IList<double> cacheVolume, IList<double> cacheVolumeMin)
